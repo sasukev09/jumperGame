@@ -20,12 +20,18 @@ pygame.display.set_caption('Jump Boi')
 # Define color
 WHITE = (255, 255, 255)
 
+# Define font
+font_small = pygame.font.SysFont('Lucida Sans', 20)
+font_medium = pygame.font.SysFont('Lucida Sans', 25)
+
 # GAME Variables 
 GRAVITY = 1
 MAX_PLATFORMS = 10
 SCROLL_THRESH = 200
 scroll = 0
 bg_scroll = 0
+game_over = False
+score = 0
 
 # Load images 
 dragon_image = pygame.image.load('assets/sasukevDragonNoB.png').convert_alpha()
@@ -37,6 +43,11 @@ def draw_bg(bg_scroll):
     game_window.blit(bg_image, (0,0 + bg_scroll))
     game_window.blit(bg_image, (0,-600 + bg_scroll))
     
+# Function for displaying text on screen
+def draw_text(text, font, text_col, x, y):
+    image = font.render(text, True, text_col)
+    game_window.blit(image, (x, y))
+
 # Player class
 class Player():
     #Constructor method
@@ -97,9 +108,9 @@ class Player():
             dx = SCREEN_WIDTH - self.rect.right
         
         # Check collision with ground / bottom edge of screen
-        if self.rect.bottom + dy > SCREEN_HEIGHT:
-            dy = 0
-            self.velocity_y = -22
+        #if self.rect.bottom + dy > SCREEN_HEIGHT:
+            #dy = 0
+            #self.velocity_y = -22
 
         # Check collision with platforms
         for platform in platform_group:
@@ -155,7 +166,7 @@ platform_group = pygame.sprite.Group()
     #platform_group.add(platform)
 
 #Create starting platform
-platform = Platform(SCREEN_WIDTH // 2 - 30, SCREEN_HEIGHT - 100, 50)
+platform = Platform(SCREEN_WIDTH // 2 - 53, SCREEN_HEIGHT - 100, 100)
 platform_group.add(platform)
 
 # Defining the player INSTANCE in the game
@@ -164,43 +175,70 @@ dragon = Player(SCREEN_WIDTH // 2 , SCREEN_HEIGHT -150)
 # Game's main loop, contains game logic inside loop
 run =  True
 while run:
-    # Scroll control where player moves
-    scroll = dragon.move()
-    print(scroll)
 
-    # Draw background
-    bg_scroll += scroll
-    if bg_scroll >= 600:
-        bg_scroll = 0
-    draw_bg(bg_scroll)
+    if game_over == False:
+        # Scroll control where player moves
+        scroll = dragon.move()
+        print(scroll)
 
-    #print(bg_scroll)
+        # Draw background
+        bg_scroll += scroll
+        if bg_scroll >= 600:
+            bg_scroll = 0
+        draw_bg(bg_scroll)
 
-    # Draw player sprite
-    dragon.draw()
+        #print(bg_scroll)
 
-    #Draw platform sprite
-    platform_group.draw(game_window)
+        # Draw player sprite
+        dragon.draw()
 
-    # Generate platforms
-    if len(platform_group) < MAX_PLATFORMS:
-        platform_w = random.randint(40, 60)
-        platform_x = random.randint(0, SCREEN_WIDTH - platform_w)
-        platform_y = platform.rect.y - random.randint(80, 120)
+        #Draw platform sprite
+        platform_group.draw(game_window)
 
-        platform = Platform(platform_x, platform_y, platform_w)
-        platform_group.add(platform)
+        # Generate platforms
+        if len(platform_group) < MAX_PLATFORMS:
+            platform_w = random.randint(40, 60)
+            platform_x = random.randint(0, SCREEN_WIDTH - platform_w)
+            platform_y = platform.rect.y - random.randint(80, 120)
 
-    print(len(platform_group))
+            platform = Platform(platform_x, platform_y, platform_w)
+            platform_group.add(platform)
 
-    # Draw temporary threshold
-    #pygame.draw.line(game_window, WHITE, (0, SCROLL_THRESH), (SCREEN_WIDTH, SCROLL_THRESH))
+        print(len(platform_group))
 
-    # Setting quickness/framerate of game
-    clock.tick(FPS)
+        # Draw temporary threshold
+        #pygame.draw.line(game_window, WHITE, (0, SCROLL_THRESH), (SCREEN_WIDTH, SCROLL_THRESH))
 
-    # Update platforms
-    platform_group.update(scroll)
+        # Setting quickness/framerate of game
+        clock.tick(FPS)
+
+        # Update platforms
+        platform_group.update(scroll)
+
+        # GAME OVER condition
+        if dragon.rect.top > SCREEN_HEIGHT:
+            game_over = True
+
+    else: 
+        # Display message if 
+        draw_text('GAME OVER', font_medium, WHITE, 150, 200)
+        draw_text('YOUR SCORE: ' + str(score), font_medium, WHITE, 130, 270)
+        draw_text('PRESS ENTER TO PLAY AGAIN', font_medium, WHITE, 50, 350)
+        key = pygame.key.get_pressed()
+        if key [pygame.K_RETURN]:
+            #reset variables
+            game_over = False
+            score = 0
+            scroll = 0
+            #reposition player
+            dragon.rect.center = (SCREEN_WIDTH // 2 , SCREEN_HEIGHT -150)
+            #reset platforms
+            platform_group.empty()
+            #create platforms again
+            platform = Platform(SCREEN_WIDTH // 2 - 30, SCREEN_HEIGHT - 100, 50)
+            platform_group.add(platform)
+
+
     # event handler
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
