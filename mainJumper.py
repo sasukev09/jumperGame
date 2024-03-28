@@ -23,12 +23,20 @@ WHITE = (255, 255, 255)
 # GAME Variables 
 GRAVITY = 1
 MAX_PLATFORMS = 10
+SCROLL_THRESH = 200
+scroll = 0
+bg_scroll = 0
 
 # Load images 
 dragon_image = pygame.image.load('assets/sasukevDragonNoB.png').convert_alpha()
 bg_image = pygame.image.load('assets/galaxyBackground.png').convert_alpha()
 ice_platform = pygame.image.load('assets/iceBlock.png').convert_alpha()
 
+# Function for drawing the background
+def draw_bg(bg_scroll):
+    game_window.blit(bg_image, (0,0 + bg_scroll))
+    game_window.blit(bg_image, (0,-600 + bg_scroll))
+    
 # Player class
 class Player():
     #Constructor method
@@ -48,10 +56,12 @@ class Player():
     
     # Move method
     def move(self):
-
+        
+        # Define scroll variable
         # Reset variables 'd' as in change in something
         dx = 0
         dy = 0 
+        scroll = 0
 
         # Processing key presses
         key = pygame.key.get_pressed()
@@ -92,10 +102,28 @@ class Player():
             self.velocity_y = -22
 
         # Check collision with platforms
+        for platform in platform_group:
+            #collision in the y direction
+            if platform.rect.colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
+                # check if player is above the platform
+                if self.rect.bottom < platform.rect.centery:
+                    # is it jumping on platform or falling
+                    if self.velocity_y > 0:
+                        self.rect.bottom = platform.rect.top
+                        dy = 0
+                        self.velocity_y = -22
+
+        # Check if the player has bounced to the top of the screen
+        if self.rect.top <= SCROLL_THRESH:
+            #If player is jumping
+            if self.velocity_y < 0:
+                scroll = -dy 
 
         # update rectangle positition
         self.rect.x += dx
-        self.rect.y += dy
+        self.rect.y += dy + scroll 
+
+        return scroll
 
 # Platform class, using sprite classes, added in the arg to inherit
 class Platform(pygame.sprite.Sprite):
@@ -106,26 +134,47 @@ class Platform(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+    
+    def update(self, scroll):
+        #Update platforms vertical position
+        self.rect.y += scroll
+
+        #check if platform has gone of the screen, if so delete the platform
+        if self.rect.top > SCREEN_HEIGHT:
+            self.kill()
 
 # Create sprite groups to store platforms
 platform_group = pygame.sprite.Group()
 
 # Create temporary platforms
-for plat in range(MAX_PLATFORMS):
-    plat_width = random.randint(40,60)
-    plat_x = random.randint(0, SCREEN_WIDTH- plat_width)
-    plat_y = plat * random.randint(80, 120)
-    platform = Platform(plat_x, plat_y, plat_width)
-    platform_group.add(platform)
+#for plat in range(MAX_PLATFORMS):
+    #plat_width = random.randint(40,60)
+    #plat_x = random.randint(0, SCREEN_WIDTH- plat_width)
+    #plat_y = plat * random.randint(80, 100)
+    #platform = Platform(plat_x, plat_y, plat_width)
+    #platform_group.add(platform)
+
+#Create starting platform
+platform = Platform(SCREEN_WIDTH // 2 - 30, SCREEN_HEIGHT - 100, 50)
+platform_group.add(platform)
 
 # Defining the player INSTANCE in the game
-dragon = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT -150)
+dragon = Player(SCREEN_WIDTH // 2 , SCREEN_HEIGHT -150)
 
 # Game's main loop, contains game logic inside loop
 run =  True
 while run:
-    # Draw game background
-    game_window.blit(bg_image, (0,0))
+    # Scroll control where player moves
+    scroll = dragon.move()
+    print(scroll)
+
+    # Draw background
+    bg_scroll += scroll
+    if bg_scroll >= 600:
+        bg_scroll = 0
+    draw_bg(bg_scroll)
+
+    #print(bg_scroll)
 
     # Draw player sprite
     dragon.draw()
@@ -133,12 +182,25 @@ while run:
     #Draw platform sprite
     platform_group.draw(game_window)
 
-    # Draw move method
-    dragon.move()
+    # Generate platforms
+    if len(platform_group) < MAX_PLATFORMS:
+        platform_w = random.randint(40, 60)
+        platform_x = random.randint(0, SCREEN_WIDTH - platform_w)
+        platform_y = platform.rect.y - random.randint(80, 120)
+
+        platform = Platform(platform_x, platform_y, platform_w)
+        platform_group.add(platform)
+
+    print(len(platform_group))
+
+    # Draw temporary threshold
+    #pygame.draw.line(game_window, WHITE, (0, SCROLL_THRESH), (SCREEN_WIDTH, SCROLL_THRESH))
 
     # Setting quickness/framerate of game
     clock.tick(FPS)
 
+    # Update platforms
+    platform_group.update(scroll)
     # event handler
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
