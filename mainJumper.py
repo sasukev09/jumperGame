@@ -19,6 +19,7 @@ pygame.display.set_caption('Jump Boi')
 
 # Define color
 WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
 # Define font
 font_small = pygame.font.SysFont('Lucida Sans', 20)
@@ -32,6 +33,7 @@ scroll = 0
 bg_scroll = 0
 game_over = False
 score = 0
+fade_counter = 0
 
 # Load images 
 dragon_image = pygame.image.load('assets/sasukevDragonNoB.png').convert_alpha()
@@ -220,6 +222,12 @@ while run:
             game_over = True
 
     else: 
+        # Add fade effect
+        if fade_counter < SCREEN_WIDTH:
+            fade_counter += 1
+            pygame.draw.rect(game_window, BLACK, (0, 0, fade_counter, SCREEN_HEIGHT // 2))
+            pygame.draw.rect(game_window, BLACK,(SCREEN_WIDTH - fade_counter, SCREEN_HEIGHT /2 , SCREEN_WIDTH, SCREEN_HEIGHT /2) )
+
         # Display message if 
         draw_text('GAME OVER', font_medium, WHITE, 150, 200)
         draw_text('YOUR SCORE: ' + str(score), font_medium, WHITE, 130, 270)
