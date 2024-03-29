@@ -2,6 +2,8 @@
 import pygame
 import random
 import os
+from pygame import sprite
+from enemy import Enemy
 
 # initialize pygame
 pygame.init()
@@ -47,6 +49,8 @@ else:
 dragon_image = pygame.image.load('assets/sasukevDragonNoB.png').convert_alpha()
 bg_image = pygame.image.load('assets/galaxyBackground.png').convert_alpha()
 ice_platform = pygame.image.load('assets/iceBlock.png').convert_alpha()
+ufo_sheet_flying = pygame.image.load('assets/ufoFlying.png').convert_alpha()
+gun_beetle = pygame.image.load('assets/gunBeetleSonic.png').convert_alpha()
 
 # Function for drawing the background
 def draw_bg(bg_scroll):
@@ -57,6 +61,8 @@ def draw_bg(bg_scroll):
 def draw_text(text, font, text_col, x, y):
     image = font.render(text, True, text_col)
     game_window.blit(image, (x, y))
+
+#
 
 # Player class
 class Player():
@@ -73,7 +79,7 @@ class Player():
     # Drawing rectangle
     def draw(self):
         game_window.blit(pygame.transform.flip( self.image, self.flip, False), (self.rect.x -32, self.rect.y -8))
-        pygame.draw.rect(game_window, WHITE, self.rect, 1) 
+        #pygame.draw.rect(game_window, WHITE, self.rect, 1) 
     
     # Move method
     def move(self):
@@ -143,6 +149,9 @@ class Player():
         # update rectangle positition
         self.rect.x += dx
         self.rect.y += dy + scroll 
+        
+        # Create and update mask
+        self.mask = pygame.mask.from_surface(self.image)
 
         return scroll
 
@@ -190,6 +199,7 @@ def draw_panel():
 
 # Create sprite groups to store platforms
 platform_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 
 # Create temporary platforms
 #for plat in range(MAX_PLATFORMS):
@@ -229,6 +239,9 @@ while run:
         #Draw platform sprite
         platform_group.draw(game_window)
 
+        # Draw enemy sprite
+        enemy_group.draw(game_window)
+        
         # Draw score panel
         draw_panel()
 
@@ -246,7 +259,7 @@ while run:
             platform = Platform(platform_x, platform_y, platform_w, platform_moving)
             platform_group.add(platform)
 
-        print(len(platform_group))
+        #print(len(platform_group))
 
         # Draw temporary threshold
         #pygame.draw.line(game_window, WHITE, (0, SCROLL_THRESH), (SCREEN_WIDTH, SCROLL_THRESH))
@@ -257,6 +270,15 @@ while run:
         # Update platforms
         platform_group.update(scroll)
 
+        # Generate enemies
+        if len(enemy_group) == 0 :#and score > 1500:
+                enemy = Enemy(SCREEN_WIDTH, 100, gun_beetle, 1)
+                enemy_group.add(enemy)
+
+        # Update enemies
+        enemy_group.update(SCREEN_WIDTH, scroll)
+
+
         # Update Score
         if scroll > 0:
             score += scroll
@@ -264,9 +286,15 @@ while run:
         # Draw line at previous high score
         pygame.draw.line(game_window, WHITE, (0, score - high_score + SCROLL_THRESH), (SCREEN_WIDTH, score - high_score + SCROLL_THRESH), 3)
         draw_text(' HIGH SCORE', font_small, WHITE, SCREEN_WIDTH - 130, score - high_score + SCROLL_THRESH)
-        # GAME OVER condition
+        
+
+        # GAME OVER conditions
         if dragon.rect.top > SCREEN_HEIGHT:
             game_over = True
+        #check if player collisioned with enemy
+        if pygame.sprite.spritecollide(dragon, enemy_group, False):
+            if pygame.sprite.spritecollide(dragon, enemy_group, False, pygame.sprite.collide_mask):
+                game_over = True
 
     else: 
         # Add fade effect
@@ -299,6 +327,9 @@ while run:
                 dragon.rect.center = (SCREEN_WIDTH // 2 , SCREEN_HEIGHT -150)
                 #reset platforms
                 platform_group.empty()
+                #reset enemies
+                enemy_group.empty()
+
                 #create platforms again
                 platform = Platform(SCREEN_WIDTH // 2 - 30, SCREEN_HEIGHT - 100, 50, False)
                 platform_group.add(platform)
