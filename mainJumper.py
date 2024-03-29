@@ -1,6 +1,7 @@
 # importing libraries
 import pygame
 import random
+import os
 
 # initialize pygame
 pygame.init()
@@ -20,6 +21,7 @@ pygame.display.set_caption('Jump Boi')
 # Define color
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+PANEL = (150, 90, 150)
 
 # Define font
 font_small = pygame.font.SysFont('Lucida Sans', 20)
@@ -34,6 +36,12 @@ bg_scroll = 0
 game_over = False
 score = 0
 fade_counter = 0
+
+if os.path.exists('score.txt'):
+    with open('scores.txt', 'r') as file:
+        high_score = int(file.read())
+else:
+    high_score = 0
 
 # Load images 
 dragon_image = pygame.image.load('assets/sasukevDragonNoB.png').convert_alpha()
@@ -140,21 +148,45 @@ class Player():
 
 # Platform class, using sprite classes, added in the arg to inherit
 class Platform(pygame.sprite.Sprite):
-    def __init__(self, x, y, width):
+    def __init__(self, x, y, width, moving):
         pygame.sprite.Sprite.__init__(self)
 
         self.image = pygame.transform.scale(ice_platform, (width, 28))
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.moving = moving
+        self.move_counter = random.randint(0,50)
+        self.direction = random.choice([-1,1])
+        self.speed = random.randint(1, 2)
+
     
+    # Update method for the placforms
     def update(self, scroll):
         #Update platforms vertical position
         self.rect.y += scroll
 
+        #If platform is moving platform, move side to side
+        if self.moving == True:
+            self.move_counter += 1
+            self.rect.x += self.direction * self.speed
+
+        # Change direction of platform if it moved fully or gone off the left/right side of screen
+            if self.move_counter >= 100 or self.rect.left < 0 or self.rect.right > SCREEN_WIDTH:
+                self.direction *= -1 #plaform will change direction by multiplying by -1, regardless of +- symbol
+                self.move_counter = 0 #resetting move counter
+
+
+
         #check if platform has gone of the screen, if so delete the platform
         if self.rect.top > SCREEN_HEIGHT:
             self.kill()
+
+# Function for drawing game info/scores in a panel
+def draw_panel():
+    pygame.draw.rect(game_window, PANEL, (0, 0 ,SCREEN_WIDTH, 30))
+    pygame.draw.line(game_window, WHITE, (0,30) ,  (SCREEN_WIDTH, 30), 2)
+    draw_text(' SCORE: ' + str(score), font_small, WHITE, 0, 0)
 
 # Create sprite groups to store platforms
 platform_group = pygame.sprite.Group()
@@ -168,7 +200,7 @@ platform_group = pygame.sprite.Group()
     #platform_group.add(platform)
 
 #Create starting platform
-platform = Platform(SCREEN_WIDTH // 2 - 53, SCREEN_HEIGHT - 100, 100)
+platform = Platform(SCREEN_WIDTH // 2 - 53, SCREEN_HEIGHT - 100, 100, False)
 platform_group.add(platform)
 
 # Defining the player INSTANCE in the game
@@ -197,13 +229,21 @@ while run:
         #Draw platform sprite
         platform_group.draw(game_window)
 
+        # Draw score panel
+        draw_panel()
+
         # Generate platforms
         if len(platform_group) < MAX_PLATFORMS:
             platform_w = random.randint(40, 60)
             platform_x = random.randint(0, SCREEN_WIDTH - platform_w)
             platform_y = platform.rect.y - random.randint(80, 120)
+            platform_type = random.randint(1,2)
+            if platform_type == 1 and score > 800:
+                platform_moving = True
+            else:
+                platform_moving = False
 
-            platform = Platform(platform_x, platform_y, platform_w)
+            platform = Platform(platform_x, platform_y, platform_w, platform_moving)
             platform_group.add(platform)
 
         print(len(platform_group))
@@ -217,6 +257,13 @@ while run:
         # Update platforms
         platform_group.update(scroll)
 
+        # Update Score
+        if scroll > 0:
+            score += scroll
+        
+        # Draw line at previous high score
+        pygame.draw.line(game_window, WHITE, (0, score - high_score + SCROLL_THRESH), (SCREEN_WIDTH, score - high_score + SCROLL_THRESH), 3)
+        draw_text(' HIGH SCORE', font_small, WHITE, SCREEN_WIDTH - 130, score - high_score + SCROLL_THRESH)
         # GAME OVER condition
         if dragon.rect.top > SCREEN_HEIGHT:
             game_over = True
@@ -228,29 +275,45 @@ while run:
             pygame.draw.rect(game_window, BLACK, (0, 0, fade_counter, SCREEN_HEIGHT // 2))
             pygame.draw.rect(game_window, BLACK,(SCREEN_WIDTH - fade_counter, SCREEN_HEIGHT /2 , SCREEN_WIDTH, SCREEN_HEIGHT /2) )
 
-        # Display message if 
-        draw_text('GAME OVER', font_medium, WHITE, 150, 200)
-        draw_text('YOUR SCORE: ' + str(score), font_medium, WHITE, 130, 270)
-        draw_text('PRESS ENTER TO PLAY AGAIN', font_medium, WHITE, 50, 350)
-        key = pygame.key.get_pressed()
-        if key [pygame.K_RETURN]:
-            #reset variables
-            game_over = False
-            score = 0
-            scroll = 0
-            #reposition player
-            dragon.rect.center = (SCREEN_WIDTH // 2 , SCREEN_HEIGHT -150)
-            #reset platforms
-            platform_group.empty()
-            #create platforms again
-            platform = Platform(SCREEN_WIDTH // 2 - 30, SCREEN_HEIGHT - 100, 50)
-            platform_group.add(platform)
+        # Else statement to display game over after the faded transition occurs
+        else:
+            # Display message if 
+            draw_text('GAME OVER', font_medium, WHITE, 150, 200)
+            draw_text('YOUR SCORE: ' + str(score), font_medium, WHITE, 130, 270)
+            draw_text('PRESS ENTER TO PLAY AGAIN', font_medium, WHITE, 50, 350)
+
+            #update high score
+            if score > high_score:
+                high_score = score
+                with open('scores.txt', 'w') as file:
+                    file.write(str(high_score))
+
+            # checking enter key
+            key = pygame.key.get_pressed()
+            if key [pygame.K_RETURN]:
+                #reset variables
+                game_over = False
+                score = 0
+                scroll = 0
+                #reposition player
+                dragon.rect.center = (SCREEN_WIDTH // 2 , SCREEN_HEIGHT -150)
+                #reset platforms
+                platform_group.empty()
+                #create platforms again
+                platform = Platform(SCREEN_WIDTH // 2 - 30, SCREEN_HEIGHT - 100, 50, False)
+                platform_group.add(platform)
 
 
     # event handler
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            #update high score
+            if score > high_score:
+                high_score = score
+                with open('scores.txt', 'w') as file:
+                    file.write(str(high_score))
             run = False
+    
 
     # At the end of loop, tell pygame to update the display window
     pygame.display.update()
