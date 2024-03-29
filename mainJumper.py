@@ -271,7 +271,7 @@ while run:
         platform_group.update(scroll)
 
         # Generate enemies
-        if len(enemy_group) == 0 :#and score > 1500:
+        if len(enemy_group) == 0 and score > 1500:
                 enemy = Enemy(SCREEN_WIDTH, 100, gun_beetle, 1)
                 enemy_group.add(enemy)
 
@@ -323,6 +323,7 @@ while run:
                 game_over = False
                 score = 0
                 scroll = 0
+                fade_counter = 0
                 #reposition player
                 dragon.rect.center = (SCREEN_WIDTH // 2 , SCREEN_HEIGHT -150)
                 #reset platforms
